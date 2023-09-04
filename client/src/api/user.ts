@@ -14,7 +14,7 @@ export const sendAuthCode = (data: {
 
 export const getTokenLogin = () => GET<UserType>('/user/account/tokenLogin');
 export const gitLogin = (params: { code: string; inviterId?: string }) =>
-  GET<ResLogin>('/user/account/gitLogin', params);
+  GET<ResLogin>('/plusApi/user/account/gitLogin', params);
 
 export const postRegister = ({
   username,
@@ -25,7 +25,7 @@ export const postRegister = ({
   username: string;
   code: string;
   password: string;
-  inviterId: string;
+  inviterId?: string;
 }) =>
   POST<ResLogin>(`/plusApi/user/account/register`, {
     username,

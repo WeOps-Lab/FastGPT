@@ -7,7 +7,7 @@ import { postKbDataFromList } from '@/api/plugins/kb';
 import { splitText2Chunks } from '@/utils/file';
 import { getErrText } from '@/utils/tools';
 import { formatPrice } from '@/utils/user';
-import { qaModelList } from '@/store/static';
+import { qaModel } from '@/store/static';
 import MyIcon from '@/components/Icon';
 import CloseIcon from '@/components/Icon/close';
 import DeleteIcon, { hoverDeleteStyles } from '@/components/Icon/delete';
@@ -20,9 +20,8 @@ import { useRouter } from 'next/router';
 const fileExtension = '.txt, .doc, .docx, .pdf, .md';
 
 const QAImport = ({ kbId }: { kbId: string }) => {
-  const model = qaModelList[0]?.model;
-  const unitPrice = qaModelList[0]?.price || 3;
-  const chunkLen = qaModelList[0].maxToken * 0.45;
+  const unitPrice = qaModel.price || 3;
+  const chunkLen = qaModel.maxToken * 0.45;
   const theme = useTheme();
   const router = useRouter();
   const { toast } = useToast();
@@ -54,11 +53,10 @@ const QAImport = ({ kbId }: { kbId: string }) => {
 
       // subsection import
       let success = 0;
-      const step = 300;
+      const step = 200;
       for (let i = 0; i < chunks.length; i += step) {
         const { insertLen } = await postKbDataFromList({
           kbId,
-          model,
           data: chunks.slice(i, i + step),
           mode: TrainingModeEnum.qa,
           prompt: prompt || '下面是一段长文本'
@@ -99,10 +97,9 @@ const QAImport = ({ kbId }: { kbId: string }) => {
           return {
             ...file,
             tokens: splitRes.tokens,
-            chunks: splitRes.chunks.map((chunk) => ({
-              q: chunk,
-              a: '',
-              source: file.filename
+            chunks: file.chunks.map((chunk, i) => ({
+              ...chunk,
+              q: splitRes.chunks[i]
             }))
           };
         })
@@ -189,20 +186,20 @@ const QAImport = ({ kbId }: { kbId: string }) => {
               <Box mb={2}>
                 QA 拆分引导词{' '}
                 <MyTooltip
-                  label={`可输入关于文件内容的范围介绍，例如:\n1. 关于 Laf 的介绍\n2. xxx的简历`}
+                  label={`可输入关于文件内容的范围介绍，例如:\n1. Laf 的介绍\n2. xxx的简历\n最终会补全为: 关于{输入的内容}`}
                   forceShow
                 >
                   <QuestionOutlineIcon ml={1} />
                 </MyTooltip>
               </Box>
               <Flex alignItems={'center'} fontSize={'sm'}>
-                <Box mr={2}>下面是</Box>
+                <Box mr={2}>关于</Box>
                 <Input
                   flex={1}
                   placeholder={'Laf 云函数的介绍'}
                   bg={'myWhite.500'}
                   defaultValue={prompt}
-                  onBlur={(e) => (e.target.value ? setPrompt(`下面是"${e.target.value}"`) : '')}
+                  onBlur={(e) => (e.target.value ? setPrompt(`关于"${e.target.value}"`) : '')}
                 />
               </Flex>
             </Box>

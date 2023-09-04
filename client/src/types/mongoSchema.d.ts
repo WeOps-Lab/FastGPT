@@ -72,12 +72,13 @@ export interface TrainingDataSchema {
   kbId: string;
   expireAt: Date;
   lockTime: Date;
-  model: string;
+  vectorModel: string;
   mode: `${TrainingModeEnum}`;
   prompt: string;
   q: string;
   a: string;
   source: string;
+  file_id: string;
 }
 
 export interface ChatSchema {
@@ -102,6 +103,12 @@ export interface ChatItemSchema extends ChatItemType {
   userId: string;
   appId: string;
   time: Date;
+  userFeedback?: string;
+  adminFeedback?: {
+    kbId: string;
+    dataId: string;
+    content: string;
+  };
 }
 
 export type BillListItemType = {
@@ -135,7 +142,7 @@ export interface OpenApiSchema {
   userId: string;
   createTime: Date;
   lastUsedTime?: Date;
-  apiKey: String;
+  apiKey: string;
 }
 
 export interface PromotionRecordSchema {
@@ -164,7 +171,7 @@ export interface kbSchema {
   updateTime: Date;
   avatar: string;
   name: string;
-  model: string;
+  vectorModel: string;
   tags: string[];
 }
 
