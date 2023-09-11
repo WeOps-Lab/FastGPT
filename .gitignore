@@ -34,3 +34,5 @@ dist/
 # hugo
 **/.hugo_build.lock
 docSite/public/
+
+.idea
