@@ -37,7 +37,7 @@ import { fileDownload } from '@/utils/file';
 import { htmlTemplate } from '@/constants/common';
 import { useRouter } from 'next/router';
 import { useGlobalStore } from '@/store/global';
-import { TaskResponseKeyEnum, getDefaultChatVariables } from '@/constants/chat';
+import { TaskResponseKeyEnum } from '@/constants/chat';
 import { useTranslation } from 'react-i18next';
 import { customAlphabet } from 'nanoid';
 import { userUpdateChatFeedback, adminUpdateChatFeedback } from '@/api/chat';
@@ -55,6 +55,7 @@ const SelectDataset = dynamic(() => import('./SelectDataset'));
 const InputDataModal = dynamic(() => import('@/pages/kb/detail/components/InputDataModal'));
 
 import styles from './index.module.scss';
+import Script from 'next/script';
 
 const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyz1234567890', 24);
 
@@ -293,7 +294,7 @@ const ChatBox = (
    * user confirm send prompt
    */
   const sendPrompt = useCallback(
-    async (variables: Record<string, any> = {}, inputVal = '') => {
+    async (variables: Record<string, any> = {}, inputVal = '', history = chatHistory) => {
       if (!onStartChat) return;
       if (isChatting) {
         toast({
@@ -314,7 +315,7 @@ const ChatBox = (
       }
 
       const newChatList: ChatSiteItemType[] = [
-        ...chatHistory,
+        ...history,
         {
           dataId: nanoid(),
           obj: 'Human',
@@ -350,10 +351,7 @@ const ChatBox = (
           messages,
           controller: abortSignal,
           generatingMessage,
-          variables: {
-            ...getDefaultChatVariables(),
-            ...variables
-          }
+          variables
         });
 
         // set finish status
@@ -408,6 +406,22 @@ const ChatBox = (
       generatingScroll,
       isPc
     ]
+  );
+
+  // retry input
+  const retryInput = useCallback(
+    async (index: number) => {
+      if (!onDelMessage) return;
+      const delHistory = chatHistory.slice(index);
+      setChatHistory((state) => (index === 0 ? [] : state.slice(0, index)));
+
+      await Promise.all(
+        delHistory.map((item, i) => onDelMessage({ contentId: item.dataId, index: index + i }))
+      );
+
+      sendPrompt(variables, delHistory[0].value, chatHistory.slice(0, index));
+    },
+    [chatHistory, onDelMessage, sendPrompt, variables]
   );
 
   // output data
@@ -473,7 +487,7 @@ const ChatBox = (
   );
   const statusBoxData = useMemo(() => {
     const colorMap = {
-      loading: '#67c13b',
+      loading: 'myGray.700',
       running: '#67c13b',
       finish: 'myBlue.600'
     };
@@ -487,6 +501,7 @@ const ChatBox = (
     };
   }, [chatHistory, isChatting, t]);
 
+  // page change and abort request
   useEffect(() => {
     return () => {
       controller.current?.abort('leave');
@@ -495,16 +510,7 @@ const ChatBox = (
     };
   }, [router.query]);
 
-  useEffect(() => {
-    event.on('guideClick', ({ text }: { text: string }) => {
-      if (!text) return;
-      handleSubmit((data) => sendPrompt(data, text))();
-    });
-
-    return () => {
-      event.off('guideClick');
-    };
-  }, [handleSubmit, sendPrompt]);
+  // page destroy and abort request
   useEffect(() => {
     const listen = () => {
       cancelBroadcast();
@@ -516,10 +522,24 @@ const ChatBox = (
     };
   }, []);
 
+  // add guide text listener
+  useEffect(() => {
+    event.on('guideClick', ({ text }: { text: string }) => {
+      if (!text) return;
+      handleSubmit((data) => sendPrompt(data, text))();
+    });
+
+    return () => {
+      event.off('guideClick');
+    };
+  }, [handleSubmit, sendPrompt]);
+
   return (
     <Flex flexDirection={'column'} h={'100%'}>
+      <Script src="/js/html2pdf.bundle.min.js" strategy="lazyOnload"></Script>
+
       <Box ref={ChatBoxRef} flex={'1 0 0'} h={0} w={'100%'} overflow={'overlay'} px={[4, 0]} pb={3}>
-        <Box maxW={['100%', '92%']} h={'100%'} mx={'auto'}>
+        <Box id="chat-container" maxW={['100%', '92%']} h={'100%'} mx={'auto'}>
           {showEmpty && <Empty />}
 
           {!!welcomeText && (
@@ -565,6 +585,9 @@ const ChatBox = (
                           label: item.value,
                           value: item.value
                         }))}
+                        {...register(item.key, {
+                          required: item.required
+                        })}
                         value={getValues(item.key)}
                         onchange={(e) => {
                           setValue(item.key, e);
@@ -616,7 +639,7 @@ const ChatBox = (
                         justifyContent={'flex-end'}
                         mr={3}
                       >
-                        <MyTooltip label={'复制'}>
+                        <MyTooltip label={t('common.Copy')}>
                           <MyIcon
                             {...controlIconStyle}
                             name={'copy'}
@@ -624,8 +647,18 @@ const ChatBox = (
                             onClick={() => onclickCopy(item.value)}
                           />
                         </MyTooltip>
+                        {!!onDelMessage && (
+                          <MyTooltip label={t('chat.retry')}>
+                            <MyIcon
+                              {...controlIconStyle}
+                              name={'retryLight'}
+                              _hover={{ color: 'green.500' }}
+                              onClick={() => retryInput(index)}
+                            />
+                          </MyTooltip>
+                        )}
                         {onDelMessage && (
-                          <MyTooltip label={'删除'}>
+                          <MyTooltip label={t('common.Delete')}>
                             <MyIcon
                               {...controlIconStyle}
                               mr={0}

@@ -1,4 +1,4 @@
-import type { FeConfigsType } from '@/types';
+import type { FeConfigsType, SystemEnvType } from '@/types';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { jsonRes } from '@/service/response';
 import { readFileSync } from 'fs';
@@ -29,19 +29,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 }
 
-const defaultSystemEnv = {
+const defaultSystemEnv: SystemEnvType = {
   vectorMaxProcess: 15,
   qaMaxProcess: 15,
   pgIvfflatProbe: 20
 };
-const defaultFeConfigs = {
+const defaultFeConfigs: FeConfigsType = {
   show_emptyChat: true,
   show_register: false,
   show_appStore: false,
   show_userDetail: false,
+  show_contact: true,
   show_git: true,
+  show_doc: true,
   systemTitle: 'FastGPT',
-  authorText: 'Made by FastGPT Team.'
+  authorText: 'Made by FastGPT Team.',
+  exportLimitMinutes: 0,
+  scripts: []
 };
 const defaultChatModels = [
   {
@@ -95,8 +99,10 @@ export async function getInitConfig() {
     const res = JSON.parse(readFileSync(filename, 'utf-8'));
     console.log(res);
 
-    global.systemEnv = res.SystemParams || defaultSystemEnv;
-    global.feConfigs = res.FeConfig || defaultFeConfigs;
+    global.systemEnv = res.SystemParams
+      ? { ...defaultSystemEnv, ...res.SystemParams }
+      : defaultSystemEnv;
+    global.feConfigs = res.FeConfig ? { ...defaultFeConfigs, ...res.FeConfig } : defaultFeConfigs;
     global.chatModels = res.ChatModels || defaultChatModels;
     global.qaModel = res.QAModel || defaultQAModel;
     global.vectorModels = res.VectorModels || defaultVectorModels;
